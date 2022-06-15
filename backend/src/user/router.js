@@ -71,11 +71,11 @@ router.get('/', async (req, res) => {
 
 router.delete('/delete/:id', async (req, res) => {
     try{
-        const user = getActiveUserByID(req.params.id);
-        
+        const user = await getActiveUserByID(req.params.id);
         user.isDeleted = true;
-        await user.save();
         
+        await user.save();
+
         res.send('Successfully Deleted!');
     } catch (e) {
         res.status(400).send(e);
