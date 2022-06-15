@@ -3,22 +3,20 @@ const User = require('./model');
 
 const router = new express.Router();
 
-router.get('/hello', async (req, res) => {
-    res.send('Hello World!!');
-});
 
 // helpers functions
-const getActiveUserByID = (userId) => {
-    const user = await User.find({
+const getActiveUserByID = async (userId) => {
+    const user = await User.findOne({
         _id: userId,
         isDeleted: false
     });
-    
+
     if (!user) {
         throw new Error("User does not Exist!");
     }
     return user;
 };
+
 
 router.post('/create', async (req, res) => {
     try {
@@ -48,18 +46,14 @@ router.patch('/edit/:id', async (req, res) => {
     }
 
     try {
-        const user = getActiveUserByID(req.params.id);
-        // if (!user) {
-        //     throw new Error('No User Found!');
-        // }
-
+        const user = await getActiveUserByID(req.params.id);
         requestedUpdateKeys.forEach(
             key => user[key] = req.body[key]
         );
 
         await user.save();
-        res.status(200).send(user);
 
+        res.status(200).send(user);
     } catch (e) {
         res.status(400).send(e);
     }
@@ -67,11 +61,24 @@ router.patch('/edit/:id', async (req, res) => {
 
 router.get('/', async (req, res) => {
     try{
-        const users = await User.find({});
-
+        const users = await User.find({isDeleted: false});
         res.send(users);
     } catch (e) {
         res.status(500).send(e);
+    }
+});
+
+
+router.delete('/delete/:id', async (req, res) => {
+    try{
+        const user = getActiveUserByID(req.params.id);
+        
+        user.isDeleted = true;
+        await user.save();
+        
+        res.send('Successfully Deleted!');
+    } catch (e) {
+        res.status(400).send(e);
     }
 });
 
