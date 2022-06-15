@@ -7,10 +7,18 @@ router.get('/hello', async (req, res) => {
     res.send('Hello World!!');
 });
 
-router.get('/users', async (req, res) => {
-    res.send('Lukiye Lukiye users dekha??')
-});
-
+// helpers functions
+const getActiveUserByID = (userId) => {
+    const user = await User.find({
+        _id: userId,
+        isDeleted: false
+    });
+    
+    if (!user) {
+        throw new Error("User does not Exist!");
+    }
+    return user;
+};
 
 router.post('/create', async (req, res) => {
     try {
@@ -40,10 +48,10 @@ router.patch('/edit/:id', async (req, res) => {
     }
 
     try {
-        const user = await User.findById(req.params.id);
-        if (!user) {
-            throw new Error('No User Found!');
-        }
+        const user = getActiveUserByID(req.params.id);
+        // if (!user) {
+        //     throw new Error('No User Found!');
+        // }
 
         requestedUpdateKeys.forEach(
             key => user[key] = req.body[key]
