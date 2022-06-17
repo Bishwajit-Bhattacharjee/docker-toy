@@ -11,52 +11,147 @@ const userFields = [
 	'mobileNo'
 ];
 
+const getClearState = () => {
+	const states = {};
+	userFields.forEach(field => states[field] = "");
+	return states;
+}
 class UserTable extends React.Component {
+
+	constructor(props) {
+		super(props);
+		this.state = {
+			editedUser: getClearState()
+		};
+	}
+
+	handleUserFieldEdit = (event) => {
+		const fieldName = event.target.getAttribute("name");
+		const fieldValue = event.target.value;
+
+		console.log(`selected field ${fieldName}, val: ${fieldValue}`)
+
+		this.setState((prevState) => ({
+      // [fieldName] : fieldValue
+      editedUser: { 
+					...prevState.editedUser, 
+					fieldName: fieldValue
+			}
+		}));
+	}
+
+	componentDidUpdate(prevProps, prevState, snapshot) {
+		if (prevProps.selectedEditUserId !== this.props.selectedEditUserId) {
+			
+			console.log(`UserTable Comp Updated! current select: 
+				${this.props.selectedEditUserId}`);
+
+			this.setState({
+				editedUser: {...this.props.users[this.props.selectedEditUserId]}
+			})
+		}
+	}
 
 	render () {
 			const columns = ['First Name', 'Fast Name', 'Email', 'Mobile No', 'Actions'];
-			const {users} = this.props;
+			const { users, onEditUserSelection, selectedEditUserId } = this.props;
+
 
 			const userRows = users.map((user) => {
+				// console.log(`userid: ${user._id}, selected: ${selectedEditUserId}`)
 				return (
-					<tr key={user._id}>
-						<ReadOnlyUserRow user={user} />
-					</tr>
-				)
+          <tr key={user._id}>
+            {(user._id === selectedEditUserId) ? (
+              <EditableUserRow
+              user={this.state.editedUser}
+              onUserInfoEdit={this.handleUserFieldEdit}
+              />
+            ) : (
+              <ReadOnlyUserRow
+                user={user}
+                onEditUserSelection={onEditUserSelection}
+              />
+            )}
+          </tr>
+        );
 			});
 
 			return (
 					<div>
-						<table>
-							<UserTableHeader columns={columns}/>
-							<tbody> 
-								{userRows}	
-							</tbody>
-						</table>
+						<form>
+							<table>
+								<UserTableHeader columns={columns}/>
+								<tbody> 
+									{userRows}	
+								</tbody>
+							</table>
+						</form>
 					</div>
 			);
 	}
 }
 
-class ReadOnlyUserRow extends React.Component {
-	render() {
-		const {user} = this.props;
+class EditableUserRow extends React.Component {
+
+
+	render() {		
+		const {user, onUserInfoEdit} = this.props;
+
+		// const {user, onEditUserSelection} = this.props;
 		const fields = userFields;
 
-		const values = fields.map((field) => {
-			return (
-				<td> {user[field] || ""} </td>
-			);
-		});
+		return (
+			<>
+				{	fields.map((field) => {
+						return (
+							<td key={field}> 
+								<input 
+									type="text"
+									name={field}
+									value={user? user[field]: ""}
+									required="required"
+									onChange={onUserInfoEdit}
+								/>
+							</td>
+						);
+					})
+				}
+				<td>
+					<button > Save </button>
+					<button> Cancel </button>
+				</td>
+			</>
 
-		values.concat(
-			<td> 
-				<button ></button>
-			</td>
 		)
+	}
+}
+
+class ReadOnlyUserRow extends React.Component {
+
+	render() {
+		const {user, onEditUserSelection} = this.props;
+		const fields = userFields;
+
 
 		return (
-				values
+			<>
+				{	fields.map((field) => {
+						return (
+							<td key={field}> {user[field] || ""} </td>
+						);
+					})
+				}
+				<td> 
+					<button
+						type='submit'
+						onClick={(e) => onEditUserSelection(user)}
+					> Edit
+					</button>
+
+					<button type='submit'> Delete </button>
+				</td>
+
+			</>
 		);
 	}	
 }
@@ -83,17 +178,11 @@ class CreateUserForm extends React.Component {
 	constructor(props) {
 		super(props);
 		
-		const clearState = this.getClearState();
+		const clearState = getClearState();
 
 		this.state = {
 			...clearState
 		};
-	}
-
-	getClearState = () => {
-		const states = {};
-		userFields.forEach(field => states[field] = "");
-		return states;
 	}
 
 	handleFormChange = (event) => {
@@ -110,10 +199,10 @@ class CreateUserForm extends React.Component {
 		console.log(this.state);
 		const newUser = {...this.state};
 
-		this.setState(this.getClearState);
+		this.setState(getClearState);
 		this.props.onUserCreation(newUser);
 
-		alert("Form submitted!")
+		// alert("Form submitted!")
 	} 
 
 	render() {		
@@ -166,8 +255,16 @@ class App extends React.Component {
 	constructor(props) {
 		super(props);
 		this.state = {
-			users: data
+			users: data,
+			selectedEditUserId: null
 		};
+	}
+
+
+	handleEditUserSelection = (user) => {
+		this.setState({
+			selectedEditUserId: user._id
+		})
 	}
 
 	handleUserCreation = (user) => {
@@ -189,6 +286,8 @@ class App extends React.Component {
 					<div className="app-container">
 						<UserTable 
 							users={this.state.users}
+							onEditUserSelection={this.handleEditUserSelection}
+							selectedEditUserId={this.state.selectedEditUserId}
 							/>
 						<CreateUserForm 
 							onUserCreation={this.handleUserCreation}
