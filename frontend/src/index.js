@@ -21,8 +21,16 @@ class UserTable extends React.Component {
 	constructor(props) {
 		super(props);
 		this.state = {
-			editedUser: getClearState()
+			editedUser: null,
+			selectedEditUserId: null
 		};
+	}
+
+	handleEditUserSelection = (user) => {
+		this.setState({
+			selectedEditUserId: user._id,
+			editedUser: {...user}
+		})
 	}
 
 	handleUserFieldEdit = (event) => {
@@ -35,41 +43,38 @@ class UserTable extends React.Component {
       // [fieldName] : fieldValue
       editedUser: { 
 					...prevState.editedUser, 
-					fieldName: fieldValue
+					[fieldName]: fieldValue
 			}
 		}));
 	}
 
-	componentDidUpdate(prevProps, prevState, snapshot) {
-		if (prevProps.selectedEditUserId !== this.props.selectedEditUserId) {
-			
-			console.log(`UserTable Comp Updated! current select: 
-				${this.props.selectedEditUserId}`);
-
-			this.setState({
-				editedUser: {...this.props.users[this.props.selectedEditUserId]}
-			})
-		}
-	}
 
 	render () {
 			const columns = ['First Name', 'Fast Name', 'Email', 'Mobile No', 'Actions'];
-			const { users, onEditUserSelection, selectedEditUserId } = this.props;
+			const { users, onSaveEditedUser } = this.props;
 
 
-			const userRows = users.map((user) => {
+			const userRows = users.map((user, ind) => {
 				// console.log(`userid: ${user._id}, selected: ${selectedEditUserId}`)
 				return (
           <tr key={user._id}>
-            {(user._id === selectedEditUserId) ? (
+            {(user._id === this.state.selectedEditUserId) ? (
               <EditableUserRow
+							editedIndex={ind}
               user={this.state.editedUser}
               onUserInfoEdit={this.handleUserFieldEdit}
+							onSaveEditedUser={(e, ind, user) => {
+								this.setState({
+									selectedEditUserId: null
+								})
+								onSaveEditedUser(e, ind, user)
+								}
+							}
               />
             ) : (
               <ReadOnlyUserRow
                 user={user}
-                onEditUserSelection={onEditUserSelection}
+                onEditUserSelection={this.handleEditUserSelection}
               />
             )}
           </tr>
@@ -95,10 +100,12 @@ class EditableUserRow extends React.Component {
 
 
 	render() {		
-		const {user, onUserInfoEdit} = this.props;
+		const {editedIndex, onUserInfoEdit, onSaveEditedUser} = this.props;
 
 		// const {user, onEditUserSelection} = this.props;
 		const fields = userFields;
+
+		const user = {...this.props.user};
 
 		return (
 			<>
@@ -117,7 +124,7 @@ class EditableUserRow extends React.Component {
 					})
 				}
 				<td>
-					<button > Save </button>
+					<button onClick={(e) => onSaveEditedUser(e, editedIndex, user)}> Save </button>
 					<button> Cancel </button>
 				</td>
 			</>
@@ -256,20 +263,30 @@ class App extends React.Component {
 		super(props);
 		this.state = {
 			users: data,
-			selectedEditUserId: null
 		};
 	}
 
+	handleSaveEditedUser = (event, index, user) => {
+		event.preventDefault();
+		const newUserList = [...this.state.users];
+		newUserList[index] = {...user};
 
-	handleEditUserSelection = (user) => {
+		console.log(`Saved user ind ${index}`)
+		console.log(user)
+
+		// const delay = (ms) => {
+		// 	const startPoint = new Date().getTime()
+		// 	while (new Date().getTime() - startPoint <= ms) {/* wait */}
+		// }
+
+		// delay(5000);
+
 		this.setState({
-			selectedEditUserId: user._id
+			users: newUserList
 		})
 	}
 
 	handleUserCreation = (user) => {
-
-		console.log("user from the Epp ", user);
 
 		this.setState((prevState) => {
 			user["_id"] = prevState.users.length + 1 + "";
@@ -286,8 +303,9 @@ class App extends React.Component {
 					<div className="app-container">
 						<UserTable 
 							users={this.state.users}
-							onEditUserSelection={this.handleEditUserSelection}
-							selectedEditUserId={this.state.selectedEditUserId}
+							onSaveEditedUser={this.handleSaveEditedUser}
+							// onEditUserSelection={this.handleEditUserSelection}
+							// selectedEditUserId={this.state.selectedEditUserId}
 							/>
 						<CreateUserForm 
 							onUserCreation={this.handleUserCreation}
