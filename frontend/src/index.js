@@ -4,6 +4,8 @@ import './index.css';
 import data from './mock-data.json';
 
 
+import axios from './axios';
+
 const userFields = [
 	'firstName',
 	'lastName',
@@ -33,6 +35,13 @@ class UserTable extends React.Component {
 		})
 	}
 
+  handleUserSelectionCancel = () => {
+    this.setState({
+      selectedEditUserId: null,
+      editedUser: null
+    })
+  }
+
 	handleUserFieldEdit = (event) => {
 		const fieldName = event.target.getAttribute("name");
 		const fieldValue = event.target.value;
@@ -42,8 +51,8 @@ class UserTable extends React.Component {
 		this.setState((prevState) => ({
       // [fieldName] : fieldValue
       editedUser: { 
-					...prevState.editedUser, 
-					[fieldName]: fieldValue
+        ...prevState.editedUser, 
+        [fieldName]: fieldValue
 			}
 		}));
 	}
@@ -51,7 +60,7 @@ class UserTable extends React.Component {
 
 	render () {
 			const columns = ['First Name', 'Fast Name', 'Email', 'Mobile No', 'Actions'];
-			const { users, onSaveEditedUser } = this.props;
+			const { users, onSaveEditedUser, onDeleteUserClick} = this.props;
 
 
 			const userRows = users.map((user, ind) => {
@@ -59,23 +68,24 @@ class UserTable extends React.Component {
 				return (
           <tr key={user._id}>
             {(user._id === this.state.selectedEditUserId) ? (
+
               <EditableUserRow
-							editedIndex={ind}
-              user={this.state.editedUser}
-              onUserInfoEdit={this.handleUserFieldEdit}
-							onSaveEditedUser={(e, ind, user) => {
-								this.setState({
-									selectedEditUserId: null
-								})
-								onSaveEditedUser(e, ind, user)
-								}
-							}
+                editedIndex={ind}
+                user={this.state.editedUser}
+                onUserInfoEdit={this.handleUserFieldEdit}
+                onSaveEditedUser={(e, ind, user) => {
+                  this.setState({
+                    selectedEditUserId: null
+                  })
+                  onSaveEditedUser(e, ind, user)
+								}}
+                onUserSelectionCancel={this.handleUserSelectionCancel}
               />
             ) : (
               <ReadOnlyUserRow
                 user={user}
                 onEditUserSelection={this.handleEditUserSelection}
-              />
+                onDeleteUserClick={onDeleteUserClick}/>
             )}
           </tr>
         );
@@ -100,11 +110,8 @@ class EditableUserRow extends React.Component {
 
 
 	render() {		
-		const {editedIndex, onUserInfoEdit, onSaveEditedUser} = this.props;
-
-		// const {user, onEditUserSelection} = this.props;
+		const {editedIndex, onUserInfoEdit, onSaveEditedUser, onUserSelectionCancel} = this.props;
 		const fields = userFields;
-
 		const user = {...this.props.user};
 
 		return (
@@ -125,7 +132,7 @@ class EditableUserRow extends React.Component {
 				}
 				<td>
 					<button onClick={(e) => onSaveEditedUser(e, editedIndex, user)}> Save </button>
-					<button> Cancel </button>
+					<button onClick={onUserSelectionCancel}> Cancel  </button>
 				</td>
 			</>
 
@@ -136,7 +143,7 @@ class EditableUserRow extends React.Component {
 class ReadOnlyUserRow extends React.Component {
 
 	render() {
-		const {user, onEditUserSelection} = this.props;
+		const {user, onEditUserSelection, onDeleteUserClick} = this.props;
 		const fields = userFields;
 
 
@@ -155,7 +162,12 @@ class ReadOnlyUserRow extends React.Component {
 					> Edit
 					</button>
 
-					<button type='submit'> Delete </button>
+					<button 
+            type='submit' 
+            onClick={(e) => onDeleteUserClick(e, user)}
+            > 
+            Delete 
+          </button>
 				</td>
 
 			</>
@@ -263,40 +275,99 @@ class App extends React.Component {
 		super(props);
 		this.state = {
 			users: data,
+			shouldReload: false
 		};
 	}
 
 	handleSaveEditedUser = (event, index, user) => {
 		event.preventDefault();
-		const newUserList = [...this.state.users];
-		newUserList[index] = {...user};
 
 		console.log(`Saved user ind ${index}`)
 		console.log(user)
 
-		// const delay = (ms) => {
-		// 	const startPoint = new Date().getTime()
-		// 	while (new Date().getTime() - startPoint <= ms) {/* wait */}
-		// }
-
-		// delay(5000);
-
-		this.setState({
-			users: newUserList
-		})
+    axios
+      .patch(`/edit/${user._id}`, user)
+      .then((res) => {
+        console.log('User edited successfully!');
+        this.setState({
+          shouldReload: true
+        });
+      })
+      .catch((e) => {
+        console.log(e);
+      })
 	}
+
+  handleDeleteUser = (event, user) => {
+    event.preventDefault();
+
+    axios
+      .delete(`/delete/${user._id}`)
+      .then((res) => {
+        console.log('User deleted successfully!');
+        this.setState({
+          shouldReload: true
+        });
+      })
+      .catch((e) => {
+        console.log(e);
+      })
+
+  }
 
 	handleUserCreation = (user) => {
 
-		this.setState((prevState) => {
-			user["_id"] = prevState.users.length + 1 + "";
-			return (
-				{
-					users: [...prevState.users, user]
-				}
-			)
-		})
+    console.log(`Attempting to create user`, user);
+
+    axios
+      .post('/create', user)
+      .then((res) => {
+        console.log('User created successfully!');
+        this.setState({
+          shouldReload: true
+        });
+      })
+      .catch((e) => {
+        console.log(e);
+      })
+
 	}
+
+  componentDidMount() {
+    axios
+      .get("/")
+      .then((res) => {
+        //   console.log(res);
+        this.setState({
+          users: res.data,
+        });
+      })
+      .catch((e) => {
+        console.log(e);
+      });
+  }
+
+  componentDidUpdate() {
+    if (this.state.shouldReload) {
+      axios
+        .get("/")
+        .then((res) => {
+          //   console.log(res);
+          this.setState({
+            users: res.data,
+            shouldReload: false
+          });
+        })
+        .catch((e) => {
+          console.log(e);
+
+          this.setState({
+            shouldReload: false
+          });
+
+        });
+    }
+  }
 	
 	render() {
 			return (
@@ -304,6 +375,7 @@ class App extends React.Component {
 						<UserTable 
 							users={this.state.users}
 							onSaveEditedUser={this.handleSaveEditedUser}
+              onDeleteUserClick={this.handleDeleteUser}
 							// onEditUserSelection={this.handleEditUserSelection}
 							// selectedEditUserId={this.state.selectedEditUserId}
 							/>
