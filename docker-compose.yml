@@ -13,6 +13,7 @@ services:
       - 3050:3050
     networks:
       - express-mongo
+      - express-react
 
   mongo:
     image: mongo
@@ -24,5 +25,18 @@ services:
     ports:
       - 27017:27017
 
+  frontend:
+    build: frontend
+    volumes: 
+      - ./frontend:/usr/src/app
+      # - /usr/src/app/node_modules
+    depends_on:
+      - backend
+    ports:
+      - 3001:3000
+    networks:
+      - express-react
+
 networks:
   express-mongo:
+  express-react:
