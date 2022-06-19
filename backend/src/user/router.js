@@ -37,13 +37,13 @@ router.patch('/edit/:id', async (req, res) => {
 
     const requestedUpdateKeys = Object.keys(req.body);
     
-    const isValidUpdate = requestedUpdateKeys.
-        every(key => allowedUpdates.includes(key));
+    // const isValidUpdate = requestedUpdateKeys.
+    //     every(key => allowedUpdates.includes(key));
 
-    if (!isValidUpdate) {
-        return res.status(400).
-            send("Invalid Updates!");
-    }
+    // if (!isValidUpdate) {
+    //     return res.status(400).
+    //         send("Invalid Updates!");
+    // }
 
     try {
         const user = await getActiveUserByID(req.params.id);
