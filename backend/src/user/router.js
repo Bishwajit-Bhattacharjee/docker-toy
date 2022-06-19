@@ -1,21 +1,10 @@
 const express = require('express');
+
 const User = require('./model');
+const { getActiveUserByID } = require('./helpers');
+
 
 const router = new express.Router();
-
-
-// helpers functions
-const getActiveUserByID = async (userId) => {
-    const user = await User.findOne({
-        _id: userId,
-        isDeleted: false
-    });
-
-    if (!user) {
-        throw new Error("User does not Exist!");
-    }
-    return user;
-};
 
 
 router.post('/create', async (req, res) => {
@@ -36,14 +25,6 @@ router.patch('/edit/:id', async (req, res) => {
     ];
 
     const requestedUpdateKeys = Object.keys(req.body);
-    
-    // const isValidUpdate = requestedUpdateKeys.
-    //     every(key => allowedUpdates.includes(key));
-
-    // if (!isValidUpdate) {
-    //     return res.status(400).
-    //         send("Invalid Updates!");
-    // }
 
     try {
         const user = await getActiveUserByID(req.params.id);
